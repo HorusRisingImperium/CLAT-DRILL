@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en-IN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CLAT Drill</title>
+<style>
+:root{color-scheme:light;--bg:#f4f6f8;--fg:#16202e;--mut:#5d6878;--card:#fff;--bd:#d9dfe7;--ac:#2b4acb;--acf:#fff;--ok:#16743f;--okb:#e2f3e8;--no:#b3261e;--nob:#fbe8e6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12161d;--fg:#e8ecf2;--mut:#98a3b3;--card:#1a2029;--bd:#2d3643;--ac:#7b93ff;--acf:#0d1220;--ok:#6fd49a;--okb:#16301f;--no:#ff8f86;--nob:#3a1c1a}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#12161d;--fg:#e8ecf2;--mut:#98a3b3;--card:#1a2029;--bd:#2d3643;--ac:#7b93ff;--acf:#0d1220;--ok:#6fd49a;--okb:#16301f;--no:#ff8f86;--nob:#3a1c1a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px 16px 56px}
+h2{font:600 22px/1.2 Georgia,"Times New Roman",serif;margin:8px 0 12px}
+h3{font-size:14px;margin:20px 0 8px}
+.sub{color:var(--mut);font-size:13px}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin-bottom:16px}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;font:inherit;color:var(--mut);cursor:pointer}
+nav button.on{color:var(--fg);border-color:var(--ac);font-weight:600}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.btn,.ghost,.chip{font:inherit;border-radius:8px;border:1px solid var(--bd);padding:9px 14px;cursor:pointer;background:var(--card);color:var(--fg)}
+.btn{background:var(--ac);color:var(--acf);border-color:var(--ac);font-weight:600}
+.btn:disabled{opacity:.4;cursor:default}
+.chip.on{background:var(--ac);color:var(--acf);border-color:var(--ac)}
+button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid var(--ac);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 14px}
+label.ck{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.stem{font:19px/1.55 Georgia,"Times New Roman",serif;white-space:pre-wrap;margin:14px 0 16px}
+.qh{display:flex;justify-content:space-between;gap:12px}
+.opt{display:flex;gap:12px;width:100%;text-align:left;font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+.opt b{min-width:18px;color:var(--mut)}
+.opt.sel{border-color:var(--ac);box-shadow:inset 0 0 0 1px var(--ac)}
+.opt.right{background:var(--okb);border-color:var(--ok)}
+.opt.wrong{background:var(--nob);border-color:var(--no)}
+.fb{padding:10px 14px;border-radius:8px;margin:12px 0}
+.fb.ok{background:var(--okb);color:var(--ok)}.fb.no{background:var(--nob);color:var(--no)}
+.score{font:600 44px/1 Georgia,serif;margin:6px 0 16px}.score span{font:15px system-ui;color:var(--mut)}
+details{border-top:1px solid var(--bd);padding:8px 0}summary{cursor:pointer}
+input[type=range]{width:100%}
+.msg{background:var(--card);border-left:3px solid var(--ac);padding:8px 12px;margin-bottom:12px;font-size:14px}
+.tp{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
+.pin{background:none;border:0;font-size:18px;line-height:1;cursor:pointer;color:var(--mut);padding:0 2px}.pin.on{color:var(--ac)}
+.bar{margin-bottom:10px}.bl{font-size:13px}.bt{height:12px;background:var(--bd);border-radius:6px;overflow:hidden;margin:3px 0}.bf{height:100%;background:var(--no)}
+.cat{border:1px solid var(--bd);border-radius:10px;background:var(--card);padding:8px 12px;margin-bottom:8px}.cat summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+select{font:inherit;font-size:13px;max-width:130px;background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:6px;padding:2px 4px}
+.hide{display:none}
+</style></head>
+<body><main id="app"></main>
+<input type="file" id="file-q" class="hide" accept=".md,.markdown,.txt" multiple>
+<input type="file" id="file-k" class="hide" accept=".md,.markdown,.txt,.csv">
+<input type="file" id="file-b" class="hide" accept=".json,application/json">
+<script>
+(function(){
+'use strict';
+var MON=['january','february','march','april','may','june','july','august','september','october','november','december'];
+var LET='ABCDEFGH';
+/* ---------- parsing ---------- */
+function unesc(s){return s.replace(/\\([\\`*_{}\[\]()#+\-.!|<>~'"&])/g,'$1')}
+function detMonth(text,fn){
+  var re=/(?<![A-Za-z])(january|february|march|april|may|june|july|august|september|october|november|december)[\s_,\-]*(\d{4})(?!\d)/i;
+  var tl=(text.match(/^#\s+.*$/m)||[''])[0];
+  var m=tl.match(re)||fn.match(re)||text.slice(0,2000).match(re);
+  if(!m)return null;
+  var mi=MON.indexOf(m[1].toLowerCase()),y=+m[2];
+  return{key:y+'-'+('0'+(mi+1)).slice(-2),label:m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()+' '+y};
+}
+function parseQ(text,fn){
+  var L=text.replace(/\r/g,'').split('\n'),mo=detMonth(text,fn),topics=[],qs=[],cur=null,inO=false,prevO=false,tp=null,warn=[];
+  var qRe=/^\*\*(\d+)\.\*\*\s*(.*)$/,oRe=/^[-*+]\s+\(?([a-hA-H])\)\s*(.*)$/,tRe=/^###\s+(\d+)\.\s+(.+)$/;
+  function close(){
+    if(!cur)return;
+    cur.q=unesc(cur.q.trim());cur.o=cur.o.map(function(o){return unesc(o.trim())});
+    if(cur.o.length<2)warn.push('Topic '+cur.tn+', Q'+cur.n+' has '+cur.o.length+' option(s)');
+    cur=null;inO=false;prevO=false;
+  }
+  L.forEach(function(raw){
+    var t=raw.trim(),m;
+    if(!t){prevO=false;return}
+    if((m=t.match(tRe))){close();tp={no:+m[1],title:unesc(m[2].trim())};topics.push(tp);return}
+    if(/^##\s/.test(t)){close();return}
+    if(!tp)return;
+    if((m=t.match(qRe))){close();cur={tn:tp.no,t:tp.title,n:+m[1],q:m[2],o:[],k:-1};qs.push(cur);return}
+    if(cur&&(m=t.match(oRe))){inO=true;prevO=true;cur.o.push(m[2]);return}
+    if(cur){if(!inO)cur.q+='\n'+t;else if(prevO&&cur.o.length)cur.o[cur.o.length-1]+=' '+t}
+  });
+  close();
+  var slug=fn.toLowerCase().replace(/\.[^.]+$/,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'file';
+  return{key:mo?mo.key:'x-'+slug,label:mo?mo.label:fn.replace(/\.[^.]+$/,'').replace(/_/g,' '),topics:topics,qs:qs,warn:warn};
+}
+var P='(?:Q\\.?\\s*)?\\d{1,3}\\s*[-–—.):=]?\\s*\\(?[a-dA-D]\\)?';
+var WHOLE=new RegExp('^'+P+'(?:[\\s,;]+'+P+')+[\\s,;.]*$');
+var SINGLE=/^(?:Q\.?\s*)?(\d{1,3})\s*[-–—.):=]*\s*(?:\(([a-dA-D])\)|([a-dA-D])(?=\s*$|\s*[.,;:)\-–—|]))/;
+var ANS=/^(?:correct\s+)?(?:answer|ans|key)\s*[:\-–]?\s*\(?([a-dA-D])\)?(?=$|[\s.,;:)\-–—])/i;
+function parseKey(text,topics){
+  var g=-1,prev=0,curQ=null,map={},cnt=0;
+  function put(n,l){
+    var k='abcd'.indexOf(l.toLowerCase());if(k<0)return;
+    if(g<0||(n===1&&prev>1))g++;
+    prev=n;var tp=topics[g];if(!tp)return;
+    map[tp.no+'.'+n]=k;cnt++;
+  }
+  text.replace(/\r/g,'').split('\n').forEach(function(raw){
+    var r=raw.trim();if(!r||/^#/.test(r))return;
+    var ql=r.match(/^\*\*(\d+)\.\*\*/);if(ql)curQ=+ql[1];
+    var c=r.replace(/\*\*/g,'').replace(/^[-*•+]\s+/,'').replace(/\|/g,' ').replace(/\s+/g,' ').trim(),m;
+    if(!c)return;
+    if(WHOLE.test(c)){
+      var pg=/(?:Q\.?\s*)?(\d{1,3})\s*[-–—.):=]?\s*\(?([a-dA-D])\)?/g;
+      while((m=pg.exec(c)))put(+m[1],m[2]);
+      return;
+    }
+    if((m=c.match(SINGLE))){put(+m[1],m[2]||m[3]);curQ=+m[1];return}
+    if(curQ!=null&&(m=c.match(ANS)))put(curQ,m[1]);
+  });
+  return{map:map,count:cnt,groups:g+1};
+}
+/* ---------- option shuffling ---------- */
+var BAD=[/\b(all|none|neither|either|any|both)\s+of\s+(the\s+)?(above|these|them|those|following|options)\b/i,/\ball\s+the\s+above\b/i,
+/\b(both|either)\s+\(?[a-d]\)?\s*(and|&|or)\s*\(?[a-d]\)?(?![\w])/i,/^\(?[a-d]\)?\s*(and|&|,|or)\s*\(?[a-d]\)?/i,/\(\s*[a-d]\s*\)/i,
+/\b(above|previous|preceding)\s+(statement|option|answer)s?\b/i,/\b(assertion|reason|statement)s?\b/i,/^(both|neither|none|all)\b/i,/\bboth\s+(\d|[ivx]+\b)/i,
+/^(only\s+)?(statements?\s+)?([ivx]+|\d+)(\s*(and|,|&)\s*([ivx]+|\d+))+(\s+only)?$/i,/^(only\s+)?([ivx]+|\d)\s+only$|^only\s+([ivx]+|\d)$/i];
+function ordered(o){
+  var v=o.map(function(s){var n=String(s).trim().match(/^[^\d]{0,12}?(\d[\d,]*(?:\.\d+)?)/);return n?parseFloat(n[1].replace(/,/g,'')):null});
+  if(v.some(function(x){return x==null}))return false;
+  var up=true,dn=true;
+  for(var i=1;i<v.length;i++){if(v[i]<v[i-1])up=false;if(v[i]>v[i-1])dn=false}
+  return up||dn;
+}
+function canShuf(q){
+  for(var i=0;i<q.o.length;i++)for(var j=0;j<BAD.length;j++)if(BAD[j].test(q.o[i]))return false;
+  return !ordered(q.o);
+}
+function shuf(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+/* ---------- state ---------- */
+function ld(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+function loadRev(){var n=ld('cq_rev2',null);if(n)return n;var o=ld('cq_rev',{}),ks=Object.keys(o);if(!ks.length)return[];return[{id:'old',ts:0,total:0,items:ks.map(function(id){var r=o[id];return{id:id,t:r.t,q:r.q,ans:r.ans,pick:r.pick,s:r.s||'',why:'wrong'}})}]}
+var S={files:ld('cq_files',{}),hist:ld('cq_hist',{}),obs:ld('cq_obs',{}),pins:ld('cq_pins',{}),rev:loadRev(),cat:ld('cq_cat',{}),coll:ld('cq_coll',{}),catEdit:false,lastBk:ld('cq_bk',0),note:'',tab:'practice',cfg:{m:{},t:{},st:'all',n:25,sh:50,fb:'instant'},qz:null,msg:[],kp:null,keyFor:null};
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function months(){return Object.keys(S.files).sort()}
+function persist(){if(!sv('cq_files',S.files))S.msg.push('Browser storage is full. Remove a file to make room.')}
+function topicList(){var m={};months().forEach(function(k){S.files[k].qs.forEach(function(q){m[q.t]=(m[q.t]||0)+(q.k>=0?1:0)})});return Object.keys(m).map(function(t){return{t:t,n:m[t]}}).sort(function(a,b){return(S.pins[b.t]?1:0)-(S.pins[a.t]?1:0)})}
+function getPool(){
+  var c=S.cfg,o=[];
+  months().forEach(function(mk){
+    if(c.m[mk]===false)return;
+    S.files[mk].qs.forEach(function(q){
+      if(q.k<0||c.t[q.t]===false||S.obs[mk+'.'+q.tn+'.'+q.n])return;
+      var h=S.hist[mk+'.'+q.tn+'.'+q.n];
+      if(c.st==='unseen'&&h)return;
+      if(c.st==='missed'&&!(h&&h.l==='w'))return;
+      o.push({q:q,mk:mk});
+    });
+  });
+  return o;
+}
+/* ---------- views ---------- */
+function msgs(){var h=S.msg.map(function(m){return'<div class="msg">'+esc(m)+'</div>'}).join('');S.msg=[];return h}
+var CATS=[['International',/international|world|global|foreign|diplomac|bilateral|summit|united nations|\bun\b|geopolit|conflict|treaty|brics|g20|nato|asean|saarc/i],
+['Legal',/legal|\blaw|court|judic|judg(e)?ment|tribunal|legislat|\bbills?\b|\bacts?\b/i],
+['Polity & Governance',/polity|govern|constitution|parliament|election|polic(y|ies)|scheme|ministry|cabinet|administr|federal|political/i],
+['Economy',/econom|business|financ|bank|trade|budget|gdp|market|\brbi\b|\btax|industr|corporate/i],
+['Environment',/environment|climate|ecolog|wildlife|biodivers|pollution|energy|forest/i],
+['Science & Tech',/science|tech|space|isro|health|\bai\b|digital|cyber|research/i],
+['Sports',/sport|olympic|cricket|games|tournament|athlet|fifa/i],
+['Awards & Culture',/award|honou?r|prize|\bbooks?\b|author|\barts?\b|culture|festival|heritage|obituar|appoint/i]];
+var CATN=CATS.map(function(x){return x[0]}).concat(['Other']);
+function catOf(t){if(S.cat[t])return S.cat[t];for(var i=0;i<CATS.length;i++)if(CATS[i][1].test(t))return CATS[i][0];return'Other'}
+function topicRow(x,i){
+  var h='<div class="tp"><label class="ck"><input type="checkbox" data-ti="'+i+'"'+(S.cfg.t[x.t]===false?'':' checked')+'>'+esc(x.t)+' ('+x.n+')</label>';
+  if(S.catEdit&&!S.pins[x.t])h+='<select data-tc="'+i+'" aria-label="Category">'+CATN.map(function(n){return'<option'+(n===catOf(x.t)?' selected':'')+'>'+esc(n)+'</option>'}).join('')+'</select>';
+  return h+'<button class="pin'+(S.pins[x.t]?' on':'')+'" data-act="pin" data-ti="'+i+'" aria-label="Pin topic" aria-pressed="'+!!S.pins[x.t]+'">'+(S.pins[x.t]?'\u2605':'\u2606')+'</button></div>';
+}
+function catBlock(name,items,tl){
+  var n=items.filter(function(x){return S.cfg.t[x.t]!==false}).length;
+  var h='<details class="cat" data-cat="'+esc(name)+'"'+(S.coll[name]?'':' open')+'><summary><b>'+esc(name)+'</b> <span class="sub">'+n+' of '+items.length+' selected</span></summary><div class="row" style="margin:6px 0"><button class="ghost" data-act="catall" data-cat="'+esc(name)+'">Select all</button><button class="ghost" data-act="catnone" data-cat="'+esc(name)+'">Clear</button></div><div class="grid">';
+  items.forEach(function(x){h+=topicRow(x,tl.indexOf(x))});
+  return h+'</div></details>';
+}
+var SCHEMA=2;
+function saveFile(name,data){
+  var use=window.claude&&window.claude.use?window.claude.use('downloads'):Promise.resolve(null);
+  return Promise.resolve(use).catch(function(){return null}).then(function(d){
+    if(d)return d.save({filename:name,data:data});
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/plain'}));a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+  });
+}
+function bkNag(){var d=(Date.now()-(S.lastBk||0))/864e5;return d>7&&(Object.keys(S.hist).length||revCount())?' <b>'+(S.lastBk?'Last backup was '+Math.floor(d)+' days ago.':'No backup yet.')+'</b> Export one from the Library tab.':''}
+function bkExport(){
+  var o={app:'clat-drill',schema:SCHEMA,saved:new Date().toISOString(),files:S.files,hist:S.hist,obs:S.obs,pins:S.pins,rev:S.rev,cat:S.cat,coll:S.coll};
+  saveFile('clat-drill-backup-'+o.saved.slice(0,10)+'.json',JSON.stringify(o)).then(function(){S.lastBk=Date.now();sv('cq_bk',S.lastBk);S.msg.push('Backup file created. Keep it somewhere safe.');render()},function(e){if(!e||e.code!=='declined'){S.msg.push('Backup failed.');render()}});
+}
+function bkApply(o){
+  S.files=o.files;S.hist=o.hist||{};S.obs=o.obs||{};S.pins=o.pins||{};S.rev=Array.isArray(o.rev)?o.rev:[];S.cat=o.cat||{};S.coll=o.coll||{};
+  persist();sv('cq_hist',S.hist);sv('cq_obs',S.obs);sv('cq_pins',S.pins);sv('cq_rev2',S.rev);sv('cq_cat',S.cat);sv('cq_coll',S.coll);
+}
+function vPrac(){
+  var ks=months();
+  if(!ks.length)return'<div class="card"><h2>Start with your files</h2><p>Import your monthly question files (.md). Then add the answer key for each month in the Library tab. Without a key a question cannot be graded.</p><div class="row"><button class="btn" data-act="import">Import question files</button></div></div>';
+  var tot=0,keyed=0,tried=0,missed=0,c=S.cfg;
+  ks.forEach(function(k){S.files[k].qs.forEach(function(q){tot++;if(q.k>=0)keyed++;var h=S.hist[k+'.'+q.tn+'.'+q.n];if(h){tried++;if(h.l==='w')missed++}})});
+  var p=getPool(),h='<div class="sub">'+tot+' questions loaded, '+keyed+' with an answer key, '+tried+' tried, '+missed+' currently missed.'+bkNag()+'</div>';
+  if(!keyed)return h+'<div class="card"><h2>No answer keys yet</h2><p>Open the Library tab and add a key for each month.</p></div>';
+  h+='<h3>Months</h3><div class="grid">';
+  ks.forEach(function(k){h+='<label class="ck"><input type="checkbox" data-m="'+k+'"'+(c.m[k]===false?'':' checked')+'>'+esc(S.files[k].label)+'</label>'});
+  h+='</div><h3>Topics <button class="ghost" data-act="tall">All</button> <button class="ghost" data-act="tnone">None</button> <button class="ghost" data-act="tpin">Pinned only</button> <button class="ghost" data-act="cedit">'+(S.catEdit?'Done editing':'Edit categories')+'</button></h3>';
+  var tl=topicList(),pin=tl.filter(function(x){return S.pins[x.t]}),by={};
+  tl.forEach(function(x){if(S.pins[x.t])return;var n=catOf(x.t);(by[n]=by[n]||[]).push(x)});
+  if(pin.length)h+=catBlock('Pinned',pin,tl);
+  CATN.forEach(function(n){if(by[n])h+=catBlock(n,by[n],tl)});
+  h+='<h3>Which questions</h3><div class="row" style="margin-top:0">';
+  [['all','All'],['unseen','Not tried yet'],['missed','Missed last time']].forEach(function(x){h+='<button class="chip'+(c.st===x[0]?' on':'')+'" data-act="st" data-v="'+x[0]+'">'+x[1]+'</button>'});
+  h+='</div><h3>How many</h3><div class="row" style="margin-top:0">';
+  [10,25,50,100,0].forEach(function(n){h+='<button class="chip'+(c.n===n?' on':'')+'" data-act="cnt" data-v="'+n+'">'+(n||'All')+'</button>'});
+  h+='</div><h3>Option shuffling: <span id="shv">'+c.sh+'</span>% of eligible questions</h3><input type="range" id="shuf" min="0" max="100" step="5" value="'+c.sh+'" aria-label="Option shuffle percentage">'
+   +'<div class="sub">Questions with options like “both A and B”, “all of the above” or numbers in order are never shuffled.</div>'
+   +'<h3>Feedback</h3><div class="row" style="margin-top:0"><button class="chip'+(c.fb==='instant'?' on':'')+'" data-act="fb" data-v="instant">After each answer</button><button class="chip'+(c.fb==='end'?' on':'')+'" data-act="fb" data-v="end">At the end (exam mode)</button></div>'
+   +'<div class="row"><button class="btn" data-act="start"'+(p.length?'':' disabled')+'>Start: '+(c.n&&c.n<p.length?c.n:p.length)+' of '+p.length+' questions</button></div>';
+  return h;
+}
+function vLib(){
+  var h='<h2>Library</h2><div class="row" style="margin:0 0 12px"><button class="btn" data-act="import">Import question files</button></div>',ks=months();
+  if(S.kp){
+    var kp=S.kp;
+    h+='<div class="card"><b>Key for '+esc(S.files[kp.mk].label)+'</b><p>Found '+kp.count+' answers in '+kp.groups+' sections. The question file has '+S.files[kp.mk].topics.length+' topics and '+S.files[kp.mk].qs.length+' questions. This key matches '+kp.matched+' of them.'
+     +(kp.groups!==S.files[kp.mk].topics.length?' Section count and topic count differ, so check a few answers after applying.':'')+'</p><div class="row"><button class="btn" data-act="kapply">Apply key</button><button class="ghost" data-act="kcancel">Cancel</button></div></div>';
+  }
+  ks.forEach(function(k){
+    var f=S.files[k],kd=f.qs.filter(function(q){return q.k>=0}).length;
+    h+='<div class="card"><b>'+esc(f.label)+'</b><div class="sub">'+f.qs.length+' questions, '+f.topics.length+' topics, '+kd+' with a key</div><div class="row"><button class="ghost" data-act="keyfor" data-m="'+k+'">'+(kd?'Replace key':'Add answer key')+'</button><button class="ghost" data-act="del" data-m="'+k+'">Remove</button></div></div>';
+  });
+  if(!ks.length)h+='<p class="sub">Nothing imported yet. Months are read from the file title or file name.</p>';
+  var ob=Object.keys(S.obs);if(ob.length){h+='<h3>Set aside as too obscure ('+ob.length+')</h3>';ob.forEach(function(id){var o=S.obs[id];h+='<div class="card"><div class="sub">'+esc(o.t||'')+'</div>'+esc(o.q)+'<div class="row"><button class="ghost" data-act="restore" data-id="'+id+'">Restore</button></div></div>'})}
+  h+='<h3>Backup and carry over</h3><div class="card"><div class="sub">'+(S.lastBk?'Last backup: '+new Date(S.lastBk).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'Never backed up')+'. Your files, answer keys, history, review notes, pins and categories live only in this browser. Export a backup before moving to a new version of this page or another browser, then import it there.</div><div class="row"><button class="btn" data-act="bkexp">Export backup</button><button class="ghost" data-act="bkimp">Import backup</button></div></div>';
+  return h;
+}
+function vQ(){
+  var z=S.qz,it=z.items[z.i],q=it.q,ins=S.cfg.fb==='instant',last=z.i===z.items.length-1;
+  var h='<div class="qh"><span>'+(z.i+1)+' / '+z.items.length+'</span><span class="sub">'+esc(S.files[it.mk].label+', '+q.t)+'</span></div><div class="stem">'+esc(q.q)+'</div>';
+  it.perm.forEach(function(oi,pos){
+    var c='opt';
+    if(it.done&&ins){if(oi===q.k)c+=' right';else if(pos===it.sel)c+=' wrong'}else if(pos===it.sel)c+=' sel';
+    h+='<button class="'+c+'" data-act="pick" data-i="'+pos+'" aria-pressed="'+(pos===it.sel)+'"><b>'+LET.charAt(pos)+'</b><span>'+esc(q.o[oi])+'</span></button>';
+  });
+  if(it.done&&ins)h+=it.ok?'<div class="fb ok">Correct.</div>':'<div class="fb no">Wrong. Answer: '+LET.charAt(it.perm.indexOf(q.k))+') '+esc(q.o[q.k])+'</div>';
+  return h+'<div class="row"><button class="btn" data-act="next"'+(ins&&!it.done?' disabled':'')+'>'+(last?'Finish':'Next')+'</button>'+(it.done?'':'<button class="ghost" data-act="skip">Skip</button>')+'<button class="chip'+(it.guess?' on':'')+'" data-act="guess" aria-pressed="'+!!it.guess+'">Guess</button><button class="ghost" data-act="obs">Too obscure</button><button class="ghost" data-act="end">End session</button></div><div class="sub" style="margin-top:12px">Keys: A to D to choose, Enter for next, S to skip, G to mark a guess (kept in Review even if right). Too obscure removes the question from all future sessions.</div>';
+}
+function vRes(){
+  var z=S.qz,its=z.items.filter(function(x){return!x.obscure}),n=its.length,r=its.filter(function(x){return x.ok}).length,miss=its.filter(function(x){return!x.ok}),sk=its.filter(function(x){return x.sel===null}).length,bt={},gu=its.filter(function(x){return x.guess&&x.sel!==null}).length;
+  its.forEach(function(x){if(x.sel===null)return;var b=bt[x.q.t]||(bt[x.q.t]={a:0,w:0});b.a++;if(!x.ok)b.w++});
+  var h='<h2>Session result</h2><div class="score">'+r+'/'+n+' <span>'+Math.round(100*r/(n||1))+'%</span></div>'+(sk?'<div class="sub">'+sk+' skipped</div>':'')+((miss.length||gu)?'<div class="sub">'+(gu?gu+' marked as guesses. ':'')+'Wrong answers and guesses were saved as a separate note for this session in the Review tab.</div>':'')+chart(bt);
+  if(miss.length){
+    h+='<h3>Missed or skipped</h3>';
+    miss.forEach(function(x){var q=x.q;h+='<details><summary>'+esc(q.q.length>150?q.q.slice(0,150)+'…':q.q)+'</summary><p class="sub">Topic: '+esc(q.t)+'</p><p>Answer: '+esc(q.o[q.k])+'</p><p class="sub">'+(x.sel!==null?'You chose: '+esc(q.o[x.perm[x.sel]]):'Skipped')+'</p></details>'});
+  }
+  return h+'<div class="row">'+(miss.length?'<button class="btn" data-act="retry">Retry these '+miss.length+'</button>':'')+'<button class="'+(miss.length?'ghost':'btn')+'" data-act="done">New session</button></div>';
+}
+function render(){
+  var h;
+  if(S.qz&&S.qz.over&&!S.qz.fin){S.qz.fin=true;setTimeout(writeReview,0)}
+  if(S.qz)h=S.qz.over?vRes():vQ();
+  else h='<nav><button data-act="tab" data-v="practice" class="'+(S.tab==='practice'?'on':'')+'">Practice</button><button data-act="tab" data-v="lib" class="'+(S.tab==='lib'?'on':'')+'">Library</button><button data-act="tab" data-v="rev" class="'+(S.tab==='rev'?'on':'')+'">Review ('+revCount()+')</button></nav>'+msgs()+(S.tab==='lib'?vLib():S.tab==='rev'?vRev():vPrac());
+  $('#app').innerHTML=h;
+}
+/* ---------- quiz logic ---------- */
+function build(list){
+  return list.map(function(p){
+    var q=p.q,perm=q.o.map(function(_,i){return i});
+    if(Math.random()*100<S.cfg.sh&&canShuf(q)){for(var t=0;t<6;t++){shuf(perm);if(perm.some(function(v,i){return v!==i}))break}}
+    return{q:q,mk:p.mk,perm:perm,sel:null,done:false,ok:false};
+  });
+}
+function commit(it){
+  if(it.done||it.sel===null)return;
+  it.done=true;it.ok=it.perm[it.sel]===it.q.k;
+  var id=it.mk+'.'+it.q.tn+'.'+it.q.n,h=S.hist[id]||(S.hist[id]={r:0,w:0,l:''});
+  if(it.ok)h.r++;else h.w++;
+  h.l=it.ok?'r':'w';
+  sv('cq_hist',S.hist);syncRev(it);
+}
+function pick(pos){
+  var z=S.qz,it=z.items[z.i];
+  if(S.cfg.fb==='instant'){if(it.done)return;it.sel=pos;commit(it)}else it.sel=pos;
+  render();
+}
+function next(){
+  var z=S.qz,it=z.items[z.i];
+  if(S.cfg.fb==='instant'&&!it.done)return;
+  commit(it);
+  if(z.i===z.items.length-1)z.over=true;else z.i++;
+  render();window.scrollTo(0,0);
+}
+function endSess(){var z=S.qz;z.items.forEach(commit);z.over=true;render()}
+function curSess(make){var z=S.qz,s=S.rev.filter(function(x){return x.id===z.sid})[0];if(!s&&make){s={id:z.sid,ts:z.ts,total:z.items.length,items:[]};S.rev.push(s)}return s}
+function syncRev(it){
+  if(!it.done)return;
+  var s=curSess(it.guess||!it.ok);if(!s)return;
+  var id=it.mk+'.'+it.q.tn+'.'+it.q.n,ix=-1;
+  s.items.forEach(function(r,i){if(r.id===id)ix=i});
+  if(it.ok&&!it.guess){if(ix>=0)s.items.splice(ix,1);if(!s.items.length)S.rev.splice(S.rev.indexOf(s),1)}
+  else{var e={id:id,t:it.q.t,q:it.q.q,ans:it.q.o[it.q.k],pick:it.q.o[it.perm[it.sel]],s:ix>=0?s.items[ix].s:'',why:it.ok?'guess':'wrong'};if(ix>=0)s.items[ix]=e;else s.items.push(e)}
+  sv('cq_rev2',S.rev);
+}
+function revCount(){var n=0;S.rev.forEach(function(s){n+=s.items.length});return n}
+function adv(){var z=S.qz;if(z.i===z.items.length-1)z.over=true;else z.i++;render();window.scrollTo(0,0)}
+function skip(){var it=S.qz.items[S.qz.i];if(it.done)return;it.sel=null;adv()}
+function obsc(){var it=S.qz.items[S.qz.i],q=it.q;S.obs[it.mk+'.'+q.tn+'.'+q.n]={t:q.t,q:q.q.slice(0,200)};sv('cq_obs',S.obs);it.obscure=true;adv()}
+function chart(bt){
+  var ks=Object.keys(bt).filter(function(t){return bt[t].w}).sort(function(a,b){return bt[b].w-bt[a].w});
+  if(!ks.length)return'';
+  var mx=Math.max.apply(null,ks.map(function(t){return bt[t].a})),h='<h3>Misses by topic</h3>';
+  ks.forEach(function(t){var b=bt[t];h+='<div class="bar"><div class="bl">'+esc(t)+'</div><div class="bt" style="width:'+Math.max(8,100*b.a/mx)+'%"><div class="bf" style="width:'+(100*b.w/b.a)+'%"></div></div><div class="sub">'+b.w+' of '+b.a+' missed</div></div>'});
+  return h;
+}
+function stmt(r){return r.s||(r.q+' Answer: '+r.ans)}
+function groupRev(items){var g={};items.forEach(function(r){(g[r.t]=g[r.t]||[]).push(r)});return g}
+function sessLabel(s){return s.ts?new Date(s.ts).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}):'Earlier notes'}
+function findSess(id){return S.rev.filter(function(s){return s.id===id})[0]}
+function revMd(s){
+  var g=groupRev(s.items),o='# Review notes: '+sessLabel(s)+'\n';
+  Object.keys(g).sort().forEach(function(t){o+='\n## '+t+'\n\n';g[t].forEach(function(r){o+='- '+(r.why==='guess'?'[Guessed right] ':'')+stmt(r).replace(/\n+/g,' ')+'\n'})});
+  return o;
+}
+function vRev(){
+  var h='<h2>Review notes</h2>'+(S.note?'<div class="msg">'+esc(S.note)+'</div>':'');
+  if(!S.rev.length)return h+'<p class="sub">Wrong answers and guesses from each session are saved here as a separate note, grouped by topic.</p>';
+  var pend=0;S.rev.forEach(function(s){s.items.forEach(function(r){if(!r.s)pend++})});
+  h+='<div class="row" style="margin:0 0 12px">'+(pend?'<button class="btn" data-act="rwrite">Write statements for '+pend+'</button>':'')+'<button class="ghost" data-act="rclear">Clear all</button></div>';
+  S.rev.slice().sort(function(a,b){return b.ts-a.ts}).forEach(function(s,i){
+    var w=s.items.filter(function(r){return r.why==='wrong'}).length,g=s.items.length-w,gr=groupRev(s.items);
+    h+='<details class="card"'+(i===0?' open':'')+'><summary><b>'+esc(sessLabel(s))+'</b> <span class="sub">'+w+' wrong'+(g?', '+g+' guessed right':'')+(s.total?', '+s.total+' questions':'')+'</span></summary>'
+     +'<div class="row" style="margin:8px 0"><button class="ghost" data-act="rdl" data-id="'+s.id+'">Download .md</button><button class="ghost" data-act="rcopy" data-id="'+s.id+'">Copy</button><button class="ghost" data-act="rdel" data-id="'+s.id+'">Delete</button></div>';
+    Object.keys(gr).sort().forEach(function(t){h+='<h3>'+esc(t)+' ('+gr[t].length+')</h3>';gr[t].forEach(function(r){h+='<p>'+(r.why==='guess'?'<span class="sub">Guessed right. </span>':'')+esc(stmt(r))+'</p>'})});
+    h+='</details>';
+  });
+  return h;
+}
+var busy=false;
+async function writeReview(){
+  var list=[];S.rev.forEach(function(s){s.items.forEach(function(r){if(!r.s)list.push(r)})});
+  if(!list.length||busy)return;
+  busy=true;S.note='Writing statements\u2026';if(!S.qz&&S.tab==='rev')render();
+  try{
+    var sm=window.claude&&window.claude.use?await window.claude.use('sample'):null;
+    if(!sm){S.note='Statement writing is not available here. Notes show the question and answer.';return}
+    for(var i=0;i<list.length;i+=15){
+      var part=list.slice(i,i+15),pl=part.map(function(r,j){return{id:j,question:r.q,answer:r.ans}});
+      var ask='Rewrite each quiz question and its correct answer as ONE short declarative sentence stating the fact, as a study note. Use the correct answer only and never mention a wrong choice. Keep every detail from the question. Example: question "BRICS Connect aims to strengthen which group\u2019s rights and cross-border portability of social security?" with answer "Gig workers" becomes "BRICS Connect aims to strengthen the rights and cross-border social security portability of gig workers." Return only a JSON array of {"id":number,"s":string}. Input: '+JSON.stringify(pl);
+      var out=await sm.json(ask,{modelTier:'quick'});
+      (Array.isArray(out)?out:[]).forEach(function(x){if(x&&part[x.id]&&x.s)part[x.id].s=String(x.s)});
+      sv('cq_rev2',S.rev);
+    }
+    S.note='';
+  }catch(e){S.note=e&&e.code==='not_granted'?'Permission was declined, so notes show the question and answer only.':'Could not write statements just now. Use the button in the Review tab to retry.'}
+  finally{busy=false;if(!S.qz&&S.tab==='rev')render()}
+}
+async function dl(id){
+  var s=findSess(id);if(!s)return;
+  try{
+    var d={save:function(o){return saveFile(o.filename,o.data)}};
+    if(!d){S.msg.push('Download is not available here. Use Copy.');render();return}
+    await d.save({filename:'review-'+(s.ts?new Date(s.ts).toISOString().slice(0,16).replace(/[:T]/g,'-'):'earlier')+'.md',data:revMd(s)});
+  }catch(e){if(!e||e.code!=='declined'){S.msg.push('Download failed. Use Copy.');render()}}
+}
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b)return;
+  var a=b.getAttribute('data-act'),v=b.getAttribute('data-v'),c=S.cfg;
+  if(a==='tab'){S.tab=v}
+  else if(a==='import'){$('#file-q').click();return}
+  else if(a==='keyfor'){S.keyFor=b.getAttribute('data-m');$('#file-k').click();return}
+  else if(a==='del'){var k=b.getAttribute('data-m');if(confirm('Remove '+S.files[k].label+'? Your history for it stays saved.')){delete S.files[k];persist();S.kp=null}}
+  else if(a==='kcancel'){S.kp=null}
+  else if(a==='kapply'){
+    var kp=S.kp,n=0;
+    S.files[kp.mk].qs.forEach(function(q){var x=kp.map[q.tn+'.'+q.n];if(x!=null&&x<q.o.length){q.k=x;n++}});
+    persist();S.msg.push('Saved '+n+' answers to '+S.files[kp.mk].label+'.');S.kp=null;
+  }
+  else if(a==='st'){c.st=v}
+  else if(a==='cnt'){c.n=+v}
+  else if(a==='fb'){c.fb=v}
+  else if(a==='tall'){c.t={}}
+  else if(a==='tnone'){topicList().forEach(function(x){c.t[x.t]=false})}
+  else if(a==='start'){var p=shuf(getPool());if(c.n&&c.n<p.length)p=p.slice(0,c.n);S.qz={items:build(p),i:0,over:false,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
+  else if(a==='pin'){var tl=topicList(),tt=tl[+b.getAttribute('data-ti')].t;if(S.pins[tt])delete S.pins[tt];else S.pins[tt]=1;sv('cq_pins',S.pins)}
+  else if(a==='bkexp'){bkExport();return}
+  else if(a==='bkimp'){$('#file-b').click();return}
+  else if(a==='cedit'){S.catEdit=!S.catEdit}
+  else if(a==='catall'||a==='catnone'){var cn=b.getAttribute('data-cat');topicList().forEach(function(x){if(cn==='Pinned'?S.pins[x.t]:(!S.pins[x.t]&&catOf(x.t)===cn))c.t[x.t]=(a==='catall')})}
+  else if(a==='tpin'){if(!Object.keys(S.pins).length)S.msg.push('Pin a topic first with the star.');else topicList().forEach(function(x){c.t[x.t]=!!S.pins[x.t]})}
+  else if(a==='restore'){delete S.obs[b.getAttribute('data-id')];sv('cq_obs',S.obs)}
+  else if(a==='guess'){var g0=S.qz.items[S.qz.i];g0.guess=!g0.guess;if(g0.done)syncRev(g0)}
+  else if(a==='skip'){skip();return}
+  else if(a==='obs'){obsc();return}
+  else if(a==='rdl'){dl(b.getAttribute('data-id'));return}
+  else if(a==='rwrite'){writeReview();return}
+  else if(a==='rcopy'){if(navigator.clipboard)navigator.clipboard.writeText(revMd(findSess(b.getAttribute('data-id')))).then(function(){S.msg.push('Copied.');render()},function(){S.msg.push('Copy was blocked. Use Download.');render()});return}
+  else if(a==='rclear'){if(confirm('Delete all review notes?')){S.rev=[];sv('cq_rev2',S.rev)}}
+  else if(a==='rdel'){var did=b.getAttribute('data-id');if(confirm('Delete the notes for this session?')){S.rev=S.rev.filter(function(x){return x.id!==did});sv('cq_rev2',S.rev)}}
+  else if(a==='pick'){pick(+b.getAttribute('data-i'));return}
+  else if(a==='next'){next();return}
+  else if(a==='end'){endSess();return}
+  else if(a==='retry'){var m=S.qz.items.filter(function(x){return!x.ok}).map(function(x){return{q:x.q,mk:x.mk}});S.qz={items:build(shuf(m)),i:0,over:false,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
+  else if(a==='done'){S.qz=null}
+  render();
+});
+document.addEventListener('change',function(e){
+  var t=e.target,c=S.cfg;
+  if(t.hasAttribute&&t.hasAttribute('data-m')){c.m[t.getAttribute('data-m')]=t.checked;render()}
+  else if(t.hasAttribute&&t.hasAttribute('data-ti')){c.t[topicList()[+t.getAttribute('data-ti')].t]=t.checked;render()}
+  else if(t.hasAttribute&&t.hasAttribute('data-tc')){S.cat[topicList()[+t.getAttribute('data-tc')].t]=t.value;sv('cq_cat',S.cat);render()}
+});
+document.addEventListener('toggle',function(e){var d=e.target;if(d.tagName==='DETAILS'&&d.hasAttribute('data-cat')){var n=d.getAttribute('data-cat');if(d.open)delete S.coll[n];else S.coll[n]=1;sv('cq_coll',S.coll)}},true);
+document.addEventListener('input',function(e){if(e.target.id==='shuf'){S.cfg.sh=+e.target.value;$('#shv').textContent=S.cfg.sh}});
+document.addEventListener('keydown',function(e){
+  if(!S.qz||S.qz.over||e.ctrlKey||e.metaKey||e.altKey)return;
+  var it=S.qz.items[S.qz.i],k=e.key.toLowerCase(),i='abcdefgh'.indexOf(k);
+  if(k==='g'){it.guess=!it.guess;if(it.done)syncRev(it);render();e.preventDefault();return}
+  if(k==='s'){skip();e.preventDefault();return}
+  if(i<0&&/^[1-8]$/.test(k))i=+k-1;
+  if(i>=0&&i<it.perm.length){pick(i);e.preventDefault()}
+  else if(k==='enter'&&e.target.tagName!=='BUTTON'){next();e.preventDefault()}
+});
+$('#file-q').addEventListener('change',function(e){
+  var inp=e.target,fs=[].slice.call(inp.files);
+  Promise.all(fs.map(function(f){return f.text().then(function(t){return[f.name,t]})})).then(function(a){
+    a.forEach(function(x){
+      var r=parseQ(x[1],x[0]);
+      if(!r.qs.length){S.msg.push('No questions found in '+x[0]+'. Expected lines like **1.** and - (a).');return}
+      var old=S.files[r.key];
+      if(old){var om={};old.qs.forEach(function(q){om[q.tn+'.'+q.n]=q.k});r.qs.forEach(function(q){var v=om[q.tn+'.'+q.n];if(v!=null)q.k=v})}
+      S.files[r.key]={label:r.label,topics:r.topics,qs:r.qs};
+      S.msg.push('Imported '+r.label+': '+r.qs.length+' questions in '+r.topics.length+' topics.'+(r.warn.length?' Check: '+r.warn.slice(0,3).join('; ')+'.':''));
+    });
+    persist();inp.value='';S.tab='lib';render();
+  });
+});
+$('#file-b').addEventListener('change',function(e){
+  var inp=e.target,f=inp.files[0];if(!f)return;
+  f.text().then(function(t){
+    var o;try{o=JSON.parse(t)}catch(x){o=null}
+    inp.value='';
+    if(!o||o.app!=='clat-drill'||!o.files){S.msg.push('That is not a CLAT Drill backup file.');render();return}
+    var q=0;Object.keys(o.files).forEach(function(k){q+=o.files[k].qs.length});
+    var rn=Array.isArray(o.rev)?o.rev.reduce(function(n,x){return n+x.items.length},0):0;
+    if(!confirm('Replace everything in this browser with the backup from '+(o.saved||'unknown date').slice(0,10)+'? It holds '+q+' questions, '+Object.keys(o.hist||{}).length+' tried questions and '+rn+' review notes.'))return;
+    bkApply(o);S.tab='lib';S.msg.push('Backup restored.');render();
+  });
+});
+$('#file-k').addEventListener('change',function(e){
+  var inp=e.target,f=inp.files[0],mk=S.keyFor;if(!f||!mk||!S.files[mk])return;
+  f.text().then(function(t){
+    var fl=S.files[mk],r=parseKey(t,fl.topics),m=0;
+    fl.qs.forEach(function(q){var x=r.map[q.tn+'.'+q.n];if(x!=null&&x<q.o.length)m++});
+    if(!r.count){S.msg.push('No answers found. Use lines like 1. b, 1-b, 1. (b) or a table of question number and letter.')}
+    else S.kp={mk:mk,map:r.map,count:r.count,groups:r.groups,matched:m};
+    inp.value='';render();
+  });
+});
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+render();
+})();
+</script></body></html>
