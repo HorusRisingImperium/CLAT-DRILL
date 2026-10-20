@@ -43,11 +43,15 @@ input[type=range]{width:100%}
 .bar{margin-bottom:10px}.bl{font-size:13px}.bt{height:12px;background:var(--bd);border-radius:6px;overflow:hidden;margin:3px 0}.bf{height:100%;background:var(--no)}
 .cat{border:1px solid var(--bd);border-radius:10px;background:var(--card);padding:8px 12px;margin-bottom:8px}.cat summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 select{font:inherit;font-size:13px;max-width:130px;background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:6px;padding:2px 4px}
+textarea,input[type=text]{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg)}
+.fl{display:block;margin:12px 0 4px;font-size:13px;color:var(--mut)}.fl select{width:100%;max-width:none;padding:8px}
+.orow{display:flex;gap:8px;align-items:center;margin-bottom:6px}.orow input[type=text]{flex:1}
 .hide{display:none}
 </style></head>
 <body><main id="app"></main>
 <input type="file" id="file-q" class="hide" accept=".md,.markdown,.txt" multiple>
 <input type="file" id="file-k" class="hide" accept=".md,.markdown,.txt,.csv">
+<input type="file" id="file-t" class="hide" accept=".md,.markdown,.txt" multiple>
 <input type="file" id="file-b" class="hide" accept=".json,application/json">
 <script>
 (function(){
@@ -64,13 +68,13 @@ function detMonth(text,fn){
   var mi=MON.indexOf(m[1].toLowerCase()),y=+m[2];
   return{key:y+'-'+('0'+(mi+1)).slice(-2),label:m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()+' '+y};
 }
-function parseQ(text,fn){
-  var L=text.replace(/\r/g,'').split('\n'),mo=detMonth(text,fn),topics=[],qs=[],cur=null,inO=false,prevO=false,tp=null,warn=[];
+function parseQ(text,fn,loose){
+  var L=text.replace(/\r/g,'').split('\n'),mo=detMonth(text,fn),topics=[],qs=[],cur=null,inO=false,prevO=false,tp=loose?{no:0,title:'Imported'}:null,warn=[];
   var qRe=/^\*\*(\d+)\.\*\*\s*(.*)$/,oRe=/^[-*+]\s+\(?([a-hA-H])\)\s*(.*)$/,tRe=/^###\s+(\d+)\.\s+(.+)$/;
   function close(){
     if(!cur)return;
     cur.q=unesc(cur.q.trim());cur.o=cur.o.map(function(o){return unesc(o.trim())});
-    if(cur.o.length<2)warn.push('Topic '+cur.tn+', Q'+cur.n+' has '+cur.o.length+' option(s)');
+    if(cur.k>=cur.o.length)cur.k=-1;if(cur.o.length<2)warn.push('Topic '+cur.tn+', Q'+cur.n+' has '+cur.o.length+' option(s)');
     cur=null;inO=false;prevO=false;
   }
   L.forEach(function(raw){
@@ -81,6 +85,7 @@ function parseQ(text,fn){
     if(!tp)return;
     if((m=t.match(qRe))){close();cur={tn:tp.no,t:tp.title,n:+m[1],q:m[2],o:[],k:-1};qs.push(cur);return}
     if(cur&&(m=t.match(oRe))){inO=true;prevO=true;cur.o.push(m[2]);return}
+    if(cur&&(m=t.replace(/\*\*/g,'').match(/^(?:correct\s+)?(?:answer|ans)\s*[:\-–]?\s*\(?([a-hA-H])\)?(?=$|[\s.,;:)\-–—])/i))){cur.k='abcdefgh'.indexOf(m[1].toLowerCase());prevO=false;return}
     if(cur){if(!inO)cur.q+='\n'+t;else if(prevO&&cur.o.length)cur.o[cur.o.length-1]+=' '+t}
   });
   close();
@@ -135,7 +140,7 @@ function shuf(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i
 function ld(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
 function loadRev(){var n=ld('cq_rev2',null);if(n)return n;var o=ld('cq_rev',{}),ks=Object.keys(o);if(!ks.length)return[];return[{id:'old',ts:0,total:0,items:ks.map(function(id){var r=o[id];return{id:id,t:r.t,q:r.q,ans:r.ans,pick:r.pick,s:r.s||'',why:'wrong'}})}]}
-var S={files:ld('cq_files',{}),hist:ld('cq_hist',{}),obs:ld('cq_obs',{}),pins:ld('cq_pins',{}),rev:loadRev(),cat:ld('cq_cat',{}),coll:ld('cq_coll',{}),catEdit:false,lastBk:ld('cq_bk',0),note:'',tab:'practice',cfg:{m:{},t:{},st:'all',n:25,sh:50,fb:'instant'},qz:null,msg:[],kp:null,keyFor:null};
+var S={files:ld('cq_files',{}),hist:ld('cq_hist',{}),obs:ld('cq_obs',{}),pins:ld('cq_pins',{}),rev:loadRev(),cat:ld('cq_cat',{}),coll:ld('cq_coll',{}),catEdit:false,lastBk:ld('cq_bk',0),draft:{mk:'',tn:'',nt:'',q:'',o:['','','',''],k:-1},note:'',tab:'practice',cfg:{ev:false,m:{},t:{},st:'all',n:25,sh:50,fb:'instant'},qz:null,msg:[],kp:null,keyFor:null};
 function $(s){return document.querySelector(s)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function months(){return Object.keys(S.files).sort()}
@@ -196,6 +201,62 @@ function bkApply(o){
   S.files=o.files;S.hist=o.hist||{};S.obs=o.obs||{};S.pins=o.pins||{};S.rev=Array.isArray(o.rev)?o.rev:[];S.cat=o.cat||{};S.coll=o.coll||{};
   persist();sv('cq_hist',S.hist);sv('cq_obs',S.obs);sv('cq_pins',S.pins);sv('cq_rev2',S.rev);sv('cq_cat',S.cat);sv('cq_coll',S.coll);
 }
+function draw(pool,n,even){
+  var p=shuf(pool.slice());
+  if(!n||n>=p.length)return p;
+  if(!even)return p.slice(0,n);
+  var g={};p.forEach(function(x){(g[x.q.t]=g[x.q.t]||[]).push(x)});
+  var keys=Object.keys(g),out=[];
+  while(out.length<n){shuf(keys);var any=false;for(var i=0;i<keys.length&&out.length<n;i++){var x=g[keys[i]].pop();if(x){out.push(x);any=true}}if(!any)break}
+  return shuf(out);
+}
+function startLabel(p){
+  var ts={};p.forEach(function(x){ts[x.q.t]=1});
+  var n=S.cfg.n&&S.cfg.n<p.length?S.cfg.n:p.length,t=Object.keys(ts).length;
+  return 'Start: '+n+' question'+(n===1?'':'s')+' from '+t+' topic'+(t===1?'':'s')+' ('+p.length+' available)';
+}
+function topicFor(f,d){
+  if(d.tn==='new'){
+    var tt=(d.nt||'').trim();if(!tt){S.msg.push('Enter a name for the new topic.');return null}
+    var ex=f.topics.filter(function(x){return x.title===tt})[0],tn;
+    if(ex)tn=ex.no;else{tn=f.topics.reduce(function(m,x){return Math.max(m,x.no)},0)+1;f.topics.push({no:tn,title:tt})}
+    d.tn=String(tn);d.nt='';return{tn:tn,tt:tt};
+  }
+  var tn2=+d.tn,tp=f.topics.filter(function(x){return x.no===tn2})[0];
+  if(!tp){S.msg.push('Choose a topic.');return null}
+  return{tn:tn2,tt:tp.title};
+}
+function nextN(f,tn){return Math.max.apply(null,[999].concat(f.qs.filter(function(x){return x.tn===tn}).map(function(x){return x.n})))+1}
+function addQ(){
+  var d=S.draft,f=S.files[d.mk];if(!f)return;
+  var stem=(d.q||'').trim(),opts=[],k=-1;
+  d.o.forEach(function(t,i){t=(t||'').trim();if(t){if(i===d.k)k=opts.length;opts.push(t)}});
+  if(!stem||opts.length<2||k<0){S.msg.push('Enter the question, at least two options, and mark the correct one.');return}
+  var tp=topicFor(f,d);if(!tp)return;
+  var tn=tp.tn,tt=tp.tt,n=nextN(f,tn);
+  f.qs.push({tn:tn,t:tt,n:n,q:stem,o:opts,k:k,u:1});
+  persist();d.q='';d.o=['','','',''];d.k=-1;
+  S.msg.push('Added to '+tt+' ('+f.label+'). Fill in the next one.');
+}
+function vAdd(){
+  var ks=months(),d=S.draft,h='<h2>Add a question</h2>';
+  if(!ks.length)return h+'<p class="sub">Import a question file first. New questions are added to a month and a topic.</p>';
+  if(!d.mk||!S.files[d.mk])d.mk=ks[0];
+  var f=S.files[d.mk];
+  if(d.tn!=='new'&&!f.topics.some(function(x){return String(x.no)===String(d.tn)}))d.tn=f.topics.length?String(f.topics[0].no):'new';
+  h+='<label class="fl">Month<select data-d="mk">'+ks.map(function(k){return'<option value="'+k+'"'+(k===d.mk?' selected':'')+'>'+esc(S.files[k].label)+'</option>'}).join('')+'</select></label>';
+  h+='<label class="fl">Topic<select data-d="tn">'+f.topics.map(function(x){return'<option value="'+x.no+'"'+(String(x.no)===String(d.tn)?' selected':'')+'>'+esc(x.title)+'</option>'}).join('')+'<option value="new"'+(d.tn==='new'?' selected':'')+'>+ New topic</option></select></label>';
+  if(d.tn==='new')h+='<label class="fl">New topic name<input type="text" data-d="nt" value="'+esc(d.nt)+'"></label>';
+  h+='<label class="fl">Question<textarea rows="3" data-d="q">'+esc(d.q)+'</textarea></label><div class="fl">Options. Tick the circle beside the correct one.</div>';
+  for(var i=0;i<4;i++)h+='<div class="orow"><input type="radio" name="ak" data-d="k" value="'+i+'" aria-label="Correct answer '+LET.charAt(i)+'"'+(d.k===i?' checked':'')+'><input type="text" data-d="o" data-i="'+i+'" placeholder="Option '+LET.charAt(i)+'" value="'+esc(d.o[i]||'')+'"></div>';
+  h+='<div class="row"><button class="btn" data-act="addq">Add question</button></div><h3>Or import from a .md file</h3><div class="sub">Goes into the month and topic chosen above. Each question needs a **N.** line, options like - (a) text, and an answer line such as Answer: b under its options. Questions without an answer are skipped.</div><div class="row"><button class="ghost" data-act="timp">Choose .md file</button></div>';
+  var mine=[];ks.forEach(function(k){S.files[k].qs.forEach(function(q){if(q.u)mine.push({m:k,q:q})})});
+  if(mine.length){
+    h+='<h3>Questions you added ('+mine.length+')</h3>';
+    mine.forEach(function(x){var q=x.q;h+='<div class="card"><div class="sub">'+esc(S.files[x.m].label+', '+q.t)+'</div>'+esc(q.q.length>140?q.q.slice(0,140)+'\u2026':q.q)+'<div class="row"><button class="ghost" data-act="delq" data-m="'+x.m+'" data-tn="'+q.tn+'" data-n="'+q.n+'">Delete</button></div></div>'});
+  }
+  return h+'<p class="sub">Added questions are saved with your data and included in backups. Re-importing a month file keeps them.</p>';
+}
 function vPrac(){
   var ks=months();
   if(!ks.length)return'<div class="card"><h2>Start with your files</h2><p>Import your monthly question files (.md). Then add the answer key for each month in the Library tab. Without a key a question cannot be graded.</p><div class="row"><button class="btn" data-act="import">Import question files</button></div></div>';
@@ -214,10 +275,10 @@ function vPrac(){
   [['all','All'],['unseen','Not tried yet'],['missed','Missed last time']].forEach(function(x){h+='<button class="chip'+(c.st===x[0]?' on':'')+'" data-act="st" data-v="'+x[0]+'">'+x[1]+'</button>'});
   h+='</div><h3>How many</h3><div class="row" style="margin-top:0">';
   [10,25,50,100,0].forEach(function(n){h+='<button class="chip'+(c.n===n?' on':'')+'" data-act="cnt" data-v="'+n+'">'+(n||'All')+'</button>'});
-  h+='</div><h3>Option shuffling: <span id="shv">'+c.sh+'</span>% of eligible questions</h3><input type="range" id="shuf" min="0" max="100" step="5" value="'+c.sh+'" aria-label="Option shuffle percentage">'
+  h+='<label class="sub">or exactly <input type="number" id="ncount" min="1" max="9999" value="'+(c.n||'')+'" style="width:80px;font:inherit;padding:6px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg)"> questions</label><button class="chip'+(c.ev?' on':'')+'" data-act="even" aria-pressed="'+!!c.ev+'">Even split across topics</button></div><h3>Option shuffling: <span id="shv">'+c.sh+'</span>% of eligible questions</h3><input type="range" id="shuf" min="0" max="100" step="5" value="'+c.sh+'" aria-label="Option shuffle percentage">'
    +'<div class="sub">Questions with options like “both A and B”, “all of the above” or numbers in order are never shuffled.</div>'
    +'<h3>Feedback</h3><div class="row" style="margin-top:0"><button class="chip'+(c.fb==='instant'?' on':'')+'" data-act="fb" data-v="instant">After each answer</button><button class="chip'+(c.fb==='end'?' on':'')+'" data-act="fb" data-v="end">At the end (exam mode)</button></div>'
-   +'<div class="row"><button class="btn" data-act="start"'+(p.length?'':' disabled')+'>Start: '+(c.n&&c.n<p.length?c.n:p.length)+' of '+p.length+' questions</button></div>';
+   +'<div class="row"><button class="btn" data-act="start"'+(p.length?'':' disabled')+' id="startbtn">'+startLabel(p)+'</button></div>';
   return h;
 }
 function vLib(){
@@ -261,7 +322,7 @@ function render(){
   var h;
   if(S.qz&&S.qz.over&&!S.qz.fin){S.qz.fin=true;setTimeout(writeReview,0)}
   if(S.qz)h=S.qz.over?vRes():vQ();
-  else h='<nav><button data-act="tab" data-v="practice" class="'+(S.tab==='practice'?'on':'')+'">Practice</button><button data-act="tab" data-v="lib" class="'+(S.tab==='lib'?'on':'')+'">Library</button><button data-act="tab" data-v="rev" class="'+(S.tab==='rev'?'on':'')+'">Review ('+revCount()+')</button></nav>'+msgs()+(S.tab==='lib'?vLib():S.tab==='rev'?vRev():vPrac());
+  else h='<nav><button data-act="tab" data-v="practice" class="'+(S.tab==='practice'?'on':'')+'">Practice</button><button data-act="tab" data-v="lib" class="'+(S.tab==='lib'?'on':'')+'">Library</button><button data-act="tab" data-v="rev" class="'+(S.tab==='rev'?'on':'')+'">Review ('+revCount()+')</button><button data-act="tab" data-v="add" class="'+(S.tab==='add'?'on':'')+'">Add</button></nav>'+msgs()+(S.tab==='lib'?vLib():S.tab==='rev'?vRev():S.tab==='add'?vAdd():vPrac());
   $('#app').innerHTML=h;
 }
 /* ---------- quiz logic ---------- */
@@ -383,10 +444,14 @@ document.addEventListener('click',function(e){
   else if(a==='fb'){c.fb=v}
   else if(a==='tall'){c.t={}}
   else if(a==='tnone'){topicList().forEach(function(x){c.t[x.t]=false})}
-  else if(a==='start'){var p=shuf(getPool());if(c.n&&c.n<p.length)p=p.slice(0,c.n);S.qz={items:build(p),i:0,over:false,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
+  else if(a==='start'){var p=draw(getPool(),c.n,c.ev);S.qz={items:build(p),i:0,over:false,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
   else if(a==='pin'){var tl=topicList(),tt=tl[+b.getAttribute('data-ti')].t;if(S.pins[tt])delete S.pins[tt];else S.pins[tt]=1;sv('cq_pins',S.pins)}
   else if(a==='bkexp'){bkExport();return}
   else if(a==='bkimp'){$('#file-b').click();return}
+  else if(a==='even'){c.ev=!c.ev}
+  else if(a==='timp'){$('#file-t').click();return}
+  else if(a==='addq'){addQ()}
+  else if(a==='delq'){var dm=b.getAttribute('data-m'),dt=+b.getAttribute('data-tn'),dn=+b.getAttribute('data-n');S.files[dm].qs=S.files[dm].qs.filter(function(q){return!(q.u&&q.tn===dt&&q.n===dn)});persist()}
   else if(a==='cedit'){S.catEdit=!S.catEdit}
   else if(a==='catall'||a==='catnone'){var cn=b.getAttribute('data-cat');topicList().forEach(function(x){if(cn==='Pinned'?S.pins[x.t]:(!S.pins[x.t]&&catOf(x.t)===cn))c.t[x.t]=(a==='catall')})}
   else if(a==='tpin'){if(!Object.keys(S.pins).length)S.msg.push('Pin a topic first with the star.');else topicList().forEach(function(x){c.t[x.t]=!!S.pins[x.t]})}
@@ -410,10 +475,17 @@ document.addEventListener('change',function(e){
   var t=e.target,c=S.cfg;
   if(t.hasAttribute&&t.hasAttribute('data-m')){c.m[t.getAttribute('data-m')]=t.checked;render()}
   else if(t.hasAttribute&&t.hasAttribute('data-ti')){c.t[topicList()[+t.getAttribute('data-ti')].t]=t.checked;render()}
+  else if(t.id==='ncount'){render()}
+  else if(t.hasAttribute&&t.hasAttribute('data-d')&&t.tagName==='SELECT'){if(t.getAttribute('data-d')==='mk')S.draft.tn='';render()}
   else if(t.hasAttribute&&t.hasAttribute('data-tc')){S.cat[topicList()[+t.getAttribute('data-tc')].t]=t.value;sv('cq_cat',S.cat);render()}
 });
 document.addEventListener('toggle',function(e){var d=e.target;if(d.tagName==='DETAILS'&&d.hasAttribute('data-cat')){var n=d.getAttribute('data-cat');if(d.open)delete S.coll[n];else S.coll[n]=1;sv('cq_coll',S.coll)}},true);
-document.addEventListener('input',function(e){if(e.target.id==='shuf'){S.cfg.sh=+e.target.value;$('#shv').textContent=S.cfg.sh}});
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.id==='shuf'){S.cfg.sh=+t.value;$('#shv').textContent=S.cfg.sh}
+  else if(t.id==='ncount'){var v=parseInt(t.value,10);if(v>0){S.cfg.n=v;var sb=$('#startbtn');if(sb)sb.textContent=startLabel(getPool())}}
+  else if(t.hasAttribute&&t.hasAttribute('data-d')){var f=t.getAttribute('data-d');if(f==='o')S.draft.o[+t.getAttribute('data-i')]=t.value;else S.draft[f]=f==='k'?+t.value:t.value}
+});
 document.addEventListener('keydown',function(e){
   if(!S.qz||S.qz.over||e.ctrlKey||e.metaKey||e.altKey)return;
   var it=S.qz.items[S.qz.i],k=e.key.toLowerCase(),i='abcdefgh'.indexOf(k);
@@ -430,11 +502,28 @@ $('#file-q').addEventListener('change',function(e){
       var r=parseQ(x[1],x[0]);
       if(!r.qs.length){S.msg.push('No questions found in '+x[0]+'. Expected lines like **1.** and - (a).');return}
       var old=S.files[r.key];
-      if(old){var om={};old.qs.forEach(function(q){om[q.tn+'.'+q.n]=q.k});r.qs.forEach(function(q){var v=om[q.tn+'.'+q.n];if(v!=null)q.k=v})}
+      if(old){var om={};old.qs.forEach(function(q){om[q.tn+'.'+q.n]=q.k});r.qs.forEach(function(q){var v=om[q.tn+'.'+q.n];if(q.k<0&&v!=null&&v>=0)q.k=v})}
+      if(old){old.qs.filter(function(q){return q.u}).forEach(function(q){var tp=r.topics.filter(function(x){return x.title===q.t})[0];if(!tp){tp={no:r.topics.reduce(function(m,x){return Math.max(m,x.no)},0)+1,title:q.t};r.topics.push(tp)}r.qs.push({tn:tp.no,t:q.t,n:q.n,q:q.q,o:q.o,k:q.k,u:1})})}
       S.files[r.key]={label:r.label,topics:r.topics,qs:r.qs};
-      S.msg.push('Imported '+r.label+': '+r.qs.length+' questions in '+r.topics.length+' topics.'+(r.warn.length?' Check: '+r.warn.slice(0,3).join('; ')+'.':''));
+      S.msg.push('Imported '+r.label+': '+r.qs.length+' questions in '+r.topics.length+' topics'+(function(){var kc=r.qs.filter(function(q){return q.k>=0}).length;return kc?', '+kc+' with answers':''})()+'.'+(r.warn.length?' Check: '+r.warn.slice(0,3).join('; ')+'.':''));
     });
     persist();inp.value='';S.tab='lib';render();
+  });
+});
+$('#file-t').addEventListener('change',function(e){
+  var inp=e.target,fs=[].slice.call(inp.files),d=S.draft,f=S.files[d.mk];
+  if(!f||!fs.length)return;
+  Promise.all(fs.map(function(x){return x.text()})).then(function(ts){
+    var good=[],skip=0,dup=0;
+    ts.forEach(function(t,i){parseQ(t,fs[i].name,true).qs.forEach(function(q){if(q.k>=0&&q.o.length>=2)good.push(q);else skip++})});
+    inp.value='';
+    if(!good.length){S.msg.push('No usable questions found. Each needs a **N.** line, options like - (a) text and an Answer: b line.'+(skip?' '+skip+' had no answer.':''));render();return}
+    var tp=topicFor(f,d);if(!tp){render();return}
+    var seen={};f.qs.forEach(function(q){if(q.tn===tp.tn)seen[q.q]=1});
+    good.forEach(function(q){if(seen[q.q]){dup++;return}seen[q.q]=1;f.qs.push({tn:tp.tn,t:tp.tt,n:nextN(f,tp.tn),q:q.q,o:q.o,k:q.k,u:1})});
+    persist();
+    S.msg.push('Imported '+(good.length-dup)+' questions into '+tp.tt+' ('+f.label+').'+(skip?' Skipped '+skip+' with no answer.':'')+(dup?' Skipped '+dup+' duplicates.':''));
+    render();
   });
 });
 $('#file-b').addEventListener('change',function(e){
