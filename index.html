@@ -52,6 +52,7 @@ textarea,input[type=text]{width:100%;font:inherit;padding:8px 10px;border:1px so
 <input type="file" id="file-q" class="hide" accept=".md,.markdown,.txt" multiple>
 <input type="file" id="file-k" class="hide" accept=".md,.markdown,.txt,.csv">
 <input type="file" id="file-t" class="hide" accept=".md,.markdown,.txt" multiple>
+<input type="file" id="file-r" class="hide" accept=".md,.markdown,.txt">
 <input type="file" id="file-b" class="hide" accept=".json,application/json">
 <script>
 (function(){
@@ -249,13 +250,28 @@ function vAdd(){
   if(d.tn==='new')h+='<label class="fl">New topic name<input type="text" data-d="nt" value="'+esc(d.nt)+'"></label>';
   h+='<label class="fl">Question<textarea rows="3" data-d="q">'+esc(d.q)+'</textarea></label><div class="fl">Options. Tick the circle beside the correct one.</div>';
   for(var i=0;i<4;i++)h+='<div class="orow"><input type="radio" name="ak" data-d="k" value="'+i+'" aria-label="Correct answer '+LET.charAt(i)+'"'+(d.k===i?' checked':'')+'><input type="text" data-d="o" data-i="'+i+'" placeholder="Option '+LET.charAt(i)+'" value="'+esc(d.o[i]||'')+'"></div>';
-  h+='<div class="row"><button class="btn" data-act="addq">Add question</button></div><h3>Or import from a .md file</h3><div class="sub">Goes into the month and topic chosen above. Each question needs a **N.** line, options like - (a) text, and an answer line such as Answer: b under its options. Questions without an answer are skipped.</div><div class="row"><button class="ghost" data-act="timp">Choose .md file</button></div>';
+  h+='<div class="row"><button class="btn" data-act="addq">Add question</button></div><h3>Import or export a topic</h3><div class="sub">These act on the month and topic chosen above. Add keeps what is there. Replace deletes the topic\'s current questions first and clears its history. Export saves the topic\'s questions and answers as a .md file you can import again. Each question needs a **N.** line, options like - (a) text, and an answer line such as Answer: b under its options. Questions without an answer are skipped.</div><div class="row"><button class="ghost" data-act="timp">Add from .md</button><button class="ghost" data-act="trep">Replace topic from .md</button><button class="ghost" data-act="texp">Export topic as .md</button></div>';
   var mine=[];ks.forEach(function(k){S.files[k].qs.forEach(function(q){if(q.u)mine.push({m:k,q:q})})});
   if(mine.length){
     h+='<h3>Questions you added ('+mine.length+')</h3>';
     mine.forEach(function(x){var q=x.q;h+='<div class="card"><div class="sub">'+esc(S.files[x.m].label+', '+q.t)+'</div>'+esc(q.q.length>140?q.q.slice(0,140)+'\u2026':q.q)+'<div class="row"><button class="ghost" data-act="delq" data-m="'+x.m+'" data-tn="'+q.tn+'" data-n="'+q.n+'">Delete</button></div></div>'});
   }
   return h+'<p class="sub">Added questions are saved with your data and included in backups. Re-importing a month file keeps them.</p>';
+}
+function exportTopic(){
+  var d=S.draft,f=S.files[d.mk];
+  if(!f||d.tn==='new'){S.msg.push('Choose an existing topic to export.');render();return}
+  var tn=+d.tn,tp=f.topics.filter(function(x){return x.no===tn})[0],qs=f.qs.filter(function(q){return q.tn===tn});
+  if(!tp||!qs.length){S.msg.push('That topic has no questions.');render();return}
+  var o='# CLAT Practice Questions, '+f.label+'\n\n### '+tn+'. '+tp.title+'\n\n',nk=0;
+  qs.forEach(function(q,i){
+    o+='**'+(i+1)+'.** '+q.q+'\n\n';
+    q.o.forEach(function(t,j){o+='- ('+LET.charAt(j).toLowerCase()+') '+t+'\n'});
+    if(q.k>=0)o+='\nAnswer: ('+LET.charAt(q.k).toLowerCase()+')\n';else nk++;
+    o+='\n';
+  });
+  var nm='topic-'+tp.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)+'.md';
+  saveFile(nm,o).then(function(){S.msg.push('Exported '+qs.length+' questions from '+tp.title+'.'+(nk?' '+nk+' have no answer yet and will be skipped if you import this file.':''));render()},function(e){if(!e||e.code!=='declined'){S.msg.push('Export failed.');render()}});
 }
 function vPrac(){
   var ks=months();
@@ -450,6 +466,8 @@ document.addEventListener('click',function(e){
   else if(a==='bkimp'){$('#file-b').click();return}
   else if(a==='even'){c.ev=!c.ev}
   else if(a==='timp'){$('#file-t').click();return}
+  else if(a==='trep'){$('#file-r').click();return}
+  else if(a==='texp'){exportTopic();return}
   else if(a==='addq'){addQ()}
   else if(a==='delq'){var dm=b.getAttribute('data-m'),dt=+b.getAttribute('data-tn'),dn=+b.getAttribute('data-n');S.files[dm].qs=S.files[dm].qs.filter(function(q){return!(q.u&&q.tn===dt&&q.n===dn)});persist()}
   else if(a==='cedit'){S.catEdit=!S.catEdit}
@@ -504,6 +522,8 @@ $('#file-q').addEventListener('change',function(e){
       var old=S.files[r.key];
       if(old){var om={};old.qs.forEach(function(q){om[q.tn+'.'+q.n]=q.k});r.qs.forEach(function(q){var v=om[q.tn+'.'+q.n];if(q.k<0&&v!=null&&v>=0)q.k=v})}
       if(old){old.qs.filter(function(q){return q.u}).forEach(function(q){var tp=r.topics.filter(function(x){return x.title===q.t})[0];if(!tp){tp={no:r.topics.reduce(function(m,x){return Math.max(m,x.no)},0)+1,title:q.t};r.topics.push(tp)}r.qs.push({tn:tp.no,t:q.t,n:q.n,q:q.q,o:q.o,k:q.k,u:1})})}
+      if(old){var rt={};old.topics.forEach(function(x){if(x.rep)rt[x.title]=1});
+        if(Object.keys(rt).length){r.qs=r.qs.filter(function(q){return q.u||!rt[q.t]});r.topics.forEach(function(x){if(rt[x.title])x.rep=1})}}
       S.files[r.key]={label:r.label,topics:r.topics,qs:r.qs};
       S.msg.push('Imported '+r.label+': '+r.qs.length+' questions in '+r.topics.length+' topics'+(function(){var kc=r.qs.filter(function(q){return q.k>=0}).length;return kc?', '+kc+' with answers':''})()+'.'+(r.warn.length?' Check: '+r.warn.slice(0,3).join('; ')+'.':''));
     });
@@ -523,6 +543,28 @@ $('#file-t').addEventListener('change',function(e){
     good.forEach(function(q){if(seen[q.q]){dup++;return}seen[q.q]=1;f.qs.push({tn:tp.tn,t:tp.tt,n:nextN(f,tp.tn),q:q.q,o:q.o,k:q.k,u:1})});
     persist();
     S.msg.push('Imported '+(good.length-dup)+' questions into '+tp.tt+' ('+f.label+').'+(skip?' Skipped '+skip+' with no answer.':'')+(dup?' Skipped '+dup+' duplicates.':''));
+    render();
+  });
+});
+$('#file-r').addEventListener('change',function(e){
+  var inp=e.target,fl=inp.files[0],d=S.draft,f=S.files[d.mk];
+  if(!f||!fl)return;
+  fl.text().then(function(t){
+    inp.value='';
+    var good=[],skip=0;
+    parseQ(t,fl.name,true).qs.forEach(function(q){if(q.k>=0&&q.o.length>=2)good.push(q);else skip++});
+    if(!good.length){S.msg.push('No usable questions found, so nothing was changed. Each needs a **N.** line, options like - (a) text and an Answer: b line.');render();return}
+    if(d.tn!=='new'){
+      var tn0=+d.tn,tp0=f.topics.filter(function(x){return x.no===tn0})[0],cnt=f.qs.filter(function(q){return q.tn===tn0}).length;
+      if(!tp0||!confirm('Replace the '+cnt+' questions in "'+tp0.title+'" with the '+good.length+' from this file? The old questions and their history will be deleted.'))return;
+    }
+    var tp=topicFor(f,d);if(!tp){render();return}
+    f.qs.filter(function(q){return q.tn===tp.tn}).forEach(function(q){var id=d.mk+'.'+q.tn+'.'+q.n;delete S.hist[id];delete S.obs[id]});
+    f.qs=f.qs.filter(function(q){return q.tn!==tp.tn});
+    good.forEach(function(q,i){f.qs.push({tn:tp.tn,t:tp.tt,n:1000+i+1,q:q.q,o:q.o,k:q.k,u:1})});
+    f.topics.forEach(function(x){if(x.no===tp.tn)x.rep=1});
+    persist();sv('cq_hist',S.hist);sv('cq_obs',S.obs);
+    S.msg.push('Replaced the questions in '+tp.tt+' ('+f.label+') with '+good.length+' from the file.'+(skip?' Skipped '+skip+' with no answer.':''));
     render();
   });
 });
