@@ -141,7 +141,7 @@ function shuf(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i
 function ld(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
 function loadRev(){var n=ld('cq_rev2',null);if(n)return n;var o=ld('cq_rev',{}),ks=Object.keys(o);if(!ks.length)return[];return[{id:'old',ts:0,total:0,items:ks.map(function(id){var r=o[id];return{id:id,t:r.t,q:r.q,ans:r.ans,pick:r.pick,s:r.s||'',why:'wrong'}})}]}
-var S={files:ld('cq_files',{}),hist:ld('cq_hist',{}),obs:ld('cq_obs',{}),pins:ld('cq_pins',{}),rev:loadRev(),cat:ld('cq_cat',{}),coll:ld('cq_coll',{}),catEdit:false,lastBk:ld('cq_bk',0),draft:{mk:'',tn:'',nt:'',q:'',o:['','','',''],k:-1},note:'',tab:'practice',cfg:{ev:false,m:{},t:{},st:'all',n:25,sh:50,fb:'instant'},qz:null,msg:[],kp:null,keyFor:null};
+var S={files:ld('cq_files',{}),hist:ld('cq_hist',{}),obs:ld('cq_obs',{}),pins:ld('cq_pins',{}),rev:loadRev(),cat:ld('cq_cat',{}),coll:ld('cq_coll',{}),catEdit:false,lastBk:ld('cq_bk',0),draft:{mk:'',tn:'',nt:'',q:'',o:['','','',''],k:-1},note:'',tab:'practice',cfg:{bl:false,ev:false,m:{},t:{},st:'all',n:25,sh:50,fb:'instant'},qz:null,msg:[],kp:null,keyFor:null};
 function $(s){return document.querySelector(s)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function months(){return Object.keys(S.files).sort()}
@@ -293,7 +293,7 @@ function vPrac(){
   [10,25,50,100,0].forEach(function(n){h+='<button class="chip'+(c.n===n?' on':'')+'" data-act="cnt" data-v="'+n+'">'+(n||'All')+'</button>'});
   h+='<label class="sub">or exactly <input type="number" id="ncount" min="1" max="9999" value="'+(c.n||'')+'" style="width:80px;font:inherit;padding:6px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg)"> questions</label><button class="chip'+(c.ev?' on':'')+'" data-act="even" aria-pressed="'+!!c.ev+'">Even split across topics</button></div><h3>Option shuffling: <span id="shv">'+c.sh+'</span>% of eligible questions</h3><input type="range" id="shuf" min="0" max="100" step="5" value="'+c.sh+'" aria-label="Option shuffle percentage">'
    +'<div class="sub">Questions with options like “both A and B”, “all of the above” or numbers in order are never shuffled.</div>'
-   +'<h3>Feedback</h3><div class="row" style="margin-top:0"><button class="chip'+(c.fb==='instant'?' on':'')+'" data-act="fb" data-v="instant">After each answer</button><button class="chip'+(c.fb==='end'?' on':'')+'" data-act="fb" data-v="end">At the end (exam mode)</button></div>'
+   +'<h3>Feedback</h3><div class="row" style="margin-top:0"><button class="chip'+(c.fb==='instant'?' on':'')+'" data-act="fb" data-v="instant">After each answer</button><button class="chip'+(c.fb==='end'?' on':'')+'" data-act="fb" data-v="end">At the end (exam mode)</button><button class="chip'+(c.bl?' on':'')+'" data-act="blind" aria-pressed="'+!!c.bl+'">Blind mode</button></div><div class="sub">Blind mode hides the options. Press Show options on a question to reveal them.</div>'
    +'<div class="row"><button class="btn" data-act="start"'+(p.length?'':' disabled')+' id="startbtn">'+startLabel(p)+'</button></div>';
   return h;
 }
@@ -316,13 +316,15 @@ function vLib(){
 function vQ(){
   var z=S.qz,it=z.items[z.i],q=it.q,ins=S.cfg.fb==='instant',last=z.i===z.items.length-1;
   var h='<div class="qh"><span>'+(z.i+1)+' / '+z.items.length+'</span><span class="sub">'+esc(S.files[it.mk].label+', '+q.t)+'</span></div><div class="stem">'+esc(q.q)+'</div>';
-  it.perm.forEach(function(oi,pos){
+  var hid=z.bl&&!it.revealed;
+  if(hid)h+='<button class="btn" data-act="reveal" style="width:100%;margin-bottom:8px">Show options (O)</button>';
+  else it.perm.forEach(function(oi,pos){
     var c='opt';
     if(it.done&&ins){if(oi===q.k)c+=' right';else if(pos===it.sel)c+=' wrong'}else if(pos===it.sel)c+=' sel';
     h+='<button class="'+c+'" data-act="pick" data-i="'+pos+'" aria-pressed="'+(pos===it.sel)+'"><b>'+LET.charAt(pos)+'</b><span>'+esc(q.o[oi])+'</span></button>';
   });
   if(it.done&&ins)h+=it.ok?'<div class="fb ok">Correct.</div>':'<div class="fb no">Wrong. Answer: '+LET.charAt(it.perm.indexOf(q.k))+') '+esc(q.o[q.k])+'</div>';
-  return h+'<div class="row"><button class="btn" data-act="next"'+(ins&&!it.done?' disabled':'')+'>'+(last?'Finish':'Next')+'</button>'+(it.done?'':'<button class="ghost" data-act="skip">Skip</button>')+'<button class="chip'+(it.guess?' on':'')+'" data-act="guess" aria-pressed="'+!!it.guess+'">Guess</button><button class="ghost" data-act="obs">Too obscure</button><button class="ghost" data-act="end">End session</button></div><div class="sub" style="margin-top:12px">Keys: A to D to choose, Enter for next, S to skip, G to mark a guess (kept in Review even if right). Too obscure removes the question from all future sessions.</div>';
+  return h+'<div class="row"><button class="btn" data-act="next"'+(ins&&!it.done?' disabled':'')+'>'+(last?'Finish':'Next')+'</button>'+(it.done?'':'<button class="ghost" data-act="skip">Skip</button>')+'<button class="chip'+(it.guess?' on':'')+'" data-act="guess" aria-pressed="'+!!it.guess+'">Guess</button><button class="ghost" data-act="obs">Too obscure</button><button class="ghost" data-act="end">End session</button></div><div class="sub" style="margin-top:12px">Keys: O shows options in blind mode, A to D to choose, Enter for next, S to skip, G to mark a guess (kept in Review even if right). Too obscure removes the question from all future sessions.</div>';
 }
 function vRes(){
   var z=S.qz,its=z.items.filter(function(x){return!x.obscure}),n=its.length,r=its.filter(function(x){return x.ok}).length,miss=its.filter(function(x){return!x.ok}),sk=its.filter(function(x){return x.sel===null}).length,bt={},gu=its.filter(function(x){return x.guess&&x.sel!==null}).length;
@@ -460,10 +462,12 @@ document.addEventListener('click',function(e){
   else if(a==='fb'){c.fb=v}
   else if(a==='tall'){c.t={}}
   else if(a==='tnone'){topicList().forEach(function(x){c.t[x.t]=false})}
-  else if(a==='start'){var p=draw(getPool(),c.n,c.ev);S.qz={items:build(p),i:0,over:false,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
+  else if(a==='start'){var p=draw(getPool(),c.n,c.ev);S.qz={items:build(p),i:0,over:false,bl:!!S.cfg.bl,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
   else if(a==='pin'){var tl=topicList(),tt=tl[+b.getAttribute('data-ti')].t;if(S.pins[tt])delete S.pins[tt];else S.pins[tt]=1;sv('cq_pins',S.pins)}
   else if(a==='bkexp'){bkExport();return}
   else if(a==='bkimp'){$('#file-b').click();return}
+  else if(a==='blind'){c.bl=!c.bl}
+  else if(a==='reveal'){S.qz.items[S.qz.i].revealed=true}
   else if(a==='even'){c.ev=!c.ev}
   else if(a==='timp'){$('#file-t').click();return}
   else if(a==='trep'){$('#file-r').click();return}
@@ -485,7 +489,7 @@ document.addEventListener('click',function(e){
   else if(a==='pick'){pick(+b.getAttribute('data-i'));return}
   else if(a==='next'){next();return}
   else if(a==='end'){endSess();return}
-  else if(a==='retry'){var m=S.qz.items.filter(function(x){return!x.ok}).map(function(x){return{q:x.q,mk:x.mk}});S.qz={items:build(shuf(m)),i:0,over:false,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
+  else if(a==='retry'){var m=S.qz.items.filter(function(x){return!x.ok}).map(function(x){return{q:x.q,mk:x.mk}});S.qz={items:build(shuf(m)),i:0,over:false,bl:!!S.cfg.bl,sid:'s'+Date.now(),ts:Date.now()};window.scrollTo(0,0)}
   else if(a==='done'){S.qz=null}
   render();
 });
@@ -507,9 +511,12 @@ document.addEventListener('input',function(e){
 document.addEventListener('keydown',function(e){
   if(!S.qz||S.qz.over||e.ctrlKey||e.metaKey||e.altKey)return;
   var it=S.qz.items[S.qz.i],k=e.key.toLowerCase(),i='abcdefgh'.indexOf(k);
+  var hid=S.qz.bl&&!it.revealed;
+  if(hid&&k==='o'){it.revealed=true;render();e.preventDefault();return}
   if(k==='g'){it.guess=!it.guess;if(it.done)syncRev(it);render();e.preventDefault();return}
   if(k==='s'){skip();e.preventDefault();return}
   if(i<0&&/^[1-8]$/.test(k))i=+k-1;
+  if(hid&&(i>=0||k==='enter'))return;
   if(i>=0&&i<it.perm.length){pick(i);e.preventDefault()}
   else if(k==='enter'&&e.target.tagName!=='BUTTON'){next();e.preventDefault()}
 });
