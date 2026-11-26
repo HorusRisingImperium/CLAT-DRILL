@@ -141,7 +141,7 @@ function shuf(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i
 function ld(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
 function loadRev(){var n=ld('cq_rev2',null);if(n)return n;var o=ld('cq_rev',{}),ks=Object.keys(o);if(!ks.length)return[];return[{id:'old',ts:0,total:0,items:ks.map(function(id){var r=o[id];return{id:id,t:r.t,q:r.q,ans:r.ans,pick:r.pick,s:r.s||'',why:'wrong'}})}]}
-var S={files:ld('cq_files',{}),hist:ld('cq_hist',{}),obs:ld('cq_obs',{}),pins:ld('cq_pins',{}),rev:loadRev(),cat:ld('cq_cat',{}),coll:ld('cq_coll',{}),catEdit:false,lastBk:ld('cq_bk',0),draft:{mk:'',tn:'',nt:'',q:'',o:['','','',''],k:-1},note:'',tab:'practice',cfg:{bl:false,ev:false,m:{},t:{},st:'all',n:25,sh:50,fb:'instant'},qz:null,msg:[],kp:null,keyFor:null};
+var S={files:ld('cq_files',{}),hist:ld('cq_hist',{}),obs:ld('cq_obs',{}),pins:ld('cq_pins',{}),rev:loadRev(),bh:ld('cq_bh',{}),cat:ld('cq_cat',{}),coll:ld('cq_coll',{}),catEdit:false,lastBk:ld('cq_bk',0),draft:{mk:'',tn:'',nt:'',q:'',o:['','','',''],k:-1},note:'',tab:'practice',cfg:{bl:false,ev:false,m:{},t:{},st:'all',n:25,sh:50,fb:'instant'},qz:null,msg:[],kp:null,keyFor:null};
 function $(s){return document.querySelector(s)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function months(){return Object.keys(S.files).sort()}
@@ -195,12 +195,12 @@ function saveFile(name,data){
 }
 function bkNag(){var d=(Date.now()-(S.lastBk||0))/864e5;return d>7&&(Object.keys(S.hist).length||revCount())?' <b>'+(S.lastBk?'Last backup was '+Math.floor(d)+' days ago.':'No backup yet.')+'</b> Export one from the Library tab.':''}
 function bkExport(){
-  var o={app:'clat-drill',schema:SCHEMA,saved:new Date().toISOString(),files:S.files,hist:S.hist,obs:S.obs,pins:S.pins,rev:S.rev,cat:S.cat,coll:S.coll};
+  var o={app:'clat-drill',schema:SCHEMA,saved:new Date().toISOString(),files:S.files,hist:S.hist,obs:S.obs,pins:S.pins,rev:S.rev,cat:S.cat,coll:S.coll,bh:S.bh};
   saveFile('clat-drill-backup-'+o.saved.slice(0,10)+'.json',JSON.stringify(o)).then(function(){S.lastBk=Date.now();sv('cq_bk',S.lastBk);S.msg.push('Backup file created. Keep it somewhere safe.');render()},function(e){if(!e||e.code!=='declined'){S.msg.push('Backup failed.');render()}});
 }
 function bkApply(o){
-  S.files=o.files;S.hist=o.hist||{};S.obs=o.obs||{};S.pins=o.pins||{};S.rev=Array.isArray(o.rev)?o.rev:[];S.cat=o.cat||{};S.coll=o.coll||{};
-  persist();sv('cq_hist',S.hist);sv('cq_obs',S.obs);sv('cq_pins',S.pins);sv('cq_rev2',S.rev);sv('cq_cat',S.cat);sv('cq_coll',S.coll);
+  S.files=o.files;S.hist=o.hist||{};S.obs=o.obs||{};S.pins=o.pins||{};S.rev=Array.isArray(o.rev)?o.rev:[];S.cat=o.cat||{};S.coll=o.coll||{};S.bh=o.bh||{};
+  persist();sv('cq_hist',S.hist);sv('cq_obs',S.obs);sv('cq_pins',S.pins);sv('cq_rev2',S.rev);sv('cq_cat',S.cat);sv('cq_coll',S.coll);sv('cq_bh',S.bh);
 }
 function draw(pool,n,even){
   var p=shuf(pool.slice());
@@ -316,6 +316,7 @@ function vLib(){
 function vQ(){
   var z=S.qz,it=z.items[z.i],q=it.q,ins=S.cfg.fb==='instant',last=z.i===z.items.length-1;
   var h='<div class="qh"><span>'+(z.i+1)+' / '+z.items.length+'</span><span class="sub">'+esc(S.files[it.mk].label+', '+q.t)+'</span></div><div class="stem">'+esc(q.q)+'</div>';
+  if(z.bl)h+='<div class="row" style="margin:0 0 12px"><span class="sub">Marked blind:</span><button class="chip'+(it.blind==='r'?' on':'')+'" data-act="bmark" data-v="r" aria-pressed="'+(it.blind==='r')+'">Blind: correct</button><button class="chip'+(it.blind==='w'?' on':'')+'" data-act="bmark" data-v="w" aria-pressed="'+(it.blind==='w')+'">Blind: wrong</button></div>';
   var hid=z.bl&&!it.revealed;
   if(hid)h+='<button class="btn" data-act="reveal" style="width:100%;margin-bottom:8px">Show options (O)</button>';
   else it.perm.forEach(function(oi,pos){
@@ -327,9 +328,9 @@ function vQ(){
   return h+'<div class="row"><button class="btn" data-act="next"'+(ins&&!it.done?' disabled':'')+'>'+(last?'Finish':'Next')+'</button>'+(it.done?'':'<button class="ghost" data-act="skip">Skip</button>')+'<button class="chip'+(it.guess?' on':'')+'" data-act="guess" aria-pressed="'+!!it.guess+'">Guess</button><button class="ghost" data-act="obs">Too obscure</button><button class="ghost" data-act="end">End session</button></div><div class="sub" style="margin-top:12px">Keys: O shows options in blind mode, A to D to choose, Enter for next, S to skip, G to mark a guess (kept in Review even if right). Too obscure removes the question from all future sessions.</div>';
 }
 function vRes(){
-  var z=S.qz,its=z.items.filter(function(x){return!x.obscure}),n=its.length,r=its.filter(function(x){return x.ok}).length,miss=its.filter(function(x){return!x.ok}),sk=its.filter(function(x){return x.sel===null}).length,bt={},gu=its.filter(function(x){return x.guess&&x.sel!==null}).length;
+  var z=S.qz,its=z.items.filter(function(x){return!x.obscure}),n=its.length,r=its.filter(function(x){return x.ok}).length,miss=its.filter(function(x){return!x.ok}),sk=its.filter(function(x){return x.sel===null}).length,bt={},gu=its.filter(function(x){return x.guess&&x.sel!==null}).length,br=its.filter(function(x){return x.blind==='r'}).length,bw=its.filter(function(x){return x.blind==='w'}).length;
   its.forEach(function(x){if(x.sel===null)return;var b=bt[x.q.t]||(bt[x.q.t]={a:0,w:0});b.a++;if(!x.ok)b.w++});
-  var h='<h2>Session result</h2><div class="score">'+r+'/'+n+' <span>'+Math.round(100*r/(n||1))+'%</span></div>'+(sk?'<div class="sub">'+sk+' skipped</div>':'')+((miss.length||gu)?'<div class="sub">'+(gu?gu+' marked as guesses. ':'')+'Wrong answers and guesses were saved as a separate note for this session in the Review tab.</div>':'')+chart(bt);
+  var h='<h2>Session result</h2><div class="score">'+r+'/'+n+' <span>'+Math.round(100*r/(n||1))+'%</span></div>'+(sk?'<div class="sub">'+sk+' skipped</div>':'')+((miss.length||gu)?'<div class="sub">'+(gu?gu+' marked as guesses. ':'')+'Wrong answers and guesses were saved as a separate note for this session in the Review tab.</div>':'')+(z.bl?'<div class="sub">Blind recall: '+br+' correct, '+bw+' wrong, '+(n-br-bw)+' not marked.</div>':'')+chart(bt);
   if(miss.length){
     h+='<h3>Missed or skipped</h3>';
     miss.forEach(function(x){var q=x.q;h+='<details><summary>'+esc(q.q.length>150?q.q.slice(0,150)+'…':q.q)+'</summary><p class="sub">Topic: '+esc(q.t)+'</p><p>Answer: '+esc(q.o[q.k])+'</p><p class="sub">'+(x.sel!==null?'You chose: '+esc(q.o[x.perm[x.sel]]):'Skipped')+'</p></details>'});
@@ -383,6 +384,14 @@ function syncRev(it){
   sv('cq_rev2',S.rev);
 }
 function revCount(){var n=0;S.rev.forEach(function(s){n+=s.items.length});return n}
+function setBlind(it,v){
+  var id=it.mk+'.'+it.q.tn+'.'+it.q.n,h=S.bh[id]||(S.bh[id]={r:0,w:0,l:''});
+  if(it.blind){if(it.blind==='r')h.r--;else h.w--}
+  if(it.blind===v){it.blind=null;h.l=''}
+  else{it.blind=v;if(v==='r')h.r++;else h.w++;h.l=v}
+  if(h.r<=0&&h.w<=0)delete S.bh[id];
+  sv('cq_bh',S.bh);
+}
 function adv(){var z=S.qz;if(z.i===z.items.length-1)z.over=true;else z.i++;render();window.scrollTo(0,0)}
 function skip(){var it=S.qz.items[S.qz.i];if(it.done)return;it.sel=null;adv()}
 function obsc(){var it=S.qz.items[S.qz.i],q=it.q;S.obs[it.mk+'.'+q.tn+'.'+q.n]={t:q.t,q:q.q.slice(0,200)};sv('cq_obs',S.obs);it.obscure=true;adv()}
@@ -467,6 +476,7 @@ document.addEventListener('click',function(e){
   else if(a==='bkexp'){bkExport();return}
   else if(a==='bkimp'){$('#file-b').click();return}
   else if(a==='blind'){c.bl=!c.bl}
+  else if(a==='bmark'){setBlind(S.qz.items[S.qz.i],b.getAttribute('data-v'))}
   else if(a==='reveal'){S.qz.items[S.qz.i].revealed=true}
   else if(a==='even'){c.ev=!c.ev}
   else if(a==='timp'){$('#file-t').click();return}
@@ -566,11 +576,11 @@ $('#file-r').addEventListener('change',function(e){
       if(!tp0||!confirm('Replace the '+cnt+' questions in "'+tp0.title+'" with the '+good.length+' from this file? The old questions and their history will be deleted.'))return;
     }
     var tp=topicFor(f,d);if(!tp){render();return}
-    f.qs.filter(function(q){return q.tn===tp.tn}).forEach(function(q){var id=d.mk+'.'+q.tn+'.'+q.n;delete S.hist[id];delete S.obs[id]});
+    f.qs.filter(function(q){return q.tn===tp.tn}).forEach(function(q){var id=d.mk+'.'+q.tn+'.'+q.n;delete S.hist[id];delete S.obs[id];delete S.bh[id]});
     f.qs=f.qs.filter(function(q){return q.tn!==tp.tn});
     good.forEach(function(q,i){f.qs.push({tn:tp.tn,t:tp.tt,n:1000+i+1,q:q.q,o:q.o,k:q.k,u:1})});
     f.topics.forEach(function(x){if(x.no===tp.tn)x.rep=1});
-    persist();sv('cq_hist',S.hist);sv('cq_obs',S.obs);
+    persist();sv('cq_hist',S.hist);sv('cq_obs',S.obs);sv('cq_bh',S.bh);
     S.msg.push('Replaced the questions in '+tp.tt+' ('+f.label+') with '+good.length+' from the file.'+(skip?' Skipped '+skip+' with no answer.':''));
     render();
   });
